@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO.Compression;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,16 +47,26 @@ namespace WebApplication
 
             services.AddMvc();
 
-            // Add application services.
+            // 1  Add and cofigure compresion services right after you add the package to your project.json file ("Microsoft.AspNetCore.ResponseCompression": "1.0.0",)
+            services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                // options.MimeTypes = new string[] { "multipart/form-data", "application/pdf" };
+                options.Providers.Add<GzipCompressionProvider>();
+            });
+
             services.AddTransient<IEmailSender, AuthMessageSender>();
             services.AddTransient<ISmsSender, AuthMessageSender>();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
+
+            // 3 add response compression middleware. Right after logging
+            app.UseResponseCompression();
 
             if (env.IsDevelopment())
             {
